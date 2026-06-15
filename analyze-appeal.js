@@ -53,7 +53,7 @@ messageは審判としての一言（褒める・励ます・ツッコむ）
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`Gemini ${response.status}: ${errText.slice(0, 200)}`);
+      throw new Error(`Gemini ${response.status}: ${errText.slice(0, 1200)}`);
     }
 
     const data = await response.json();
