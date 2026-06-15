@@ -40,26 +40,27 @@ messageは審判としての一言（褒める・励ます・ツッコむ）
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 100 },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 200 },
         }),
       }
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errText = await response.text();
+      throw new Error(`Gemini ${response.status}: ${errText.slice(0, 200)}`);
     }
 
     const data = await response.json();
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
     // JSONを抽出（```json ... ``` で囲まれる場合も対応）
-    const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('JSON parse failed');
 
     const parsed = JSON.parse(jsonMatch[0]);
@@ -69,7 +70,7 @@ messageは審判としての一言（褒める・励ます・ツッコむ）
     return res.status(200).json({ war, message });
   } catch (e) {
     console.error('Gemini error:', e);
-    // APIエラーでもアプリを止めない
-    return res.status(200).json({ war: 0.01, message: '審判、採点中…' });
+    // APIエラーでもアプリを止めない（detailは診断用。アプリ側はwar/messageしか見ないので無害）
+    return res.status(200).json({ war: 0.01, message: '審判、採点中…', detail: String(e?.message || e) });
   }
 }
