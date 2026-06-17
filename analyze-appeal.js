@@ -2,16 +2,28 @@ export default async function handler(req, res) {
   // CORS対応
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-app-key');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // アプリ以外からの呼び出しを弾く（課金済みGeminiクレジットの悪用防止）。
+  // APP_SHARED_SECRET が未設定なら従来通り通す（後方互換）。
+  const appSecret = process.env.APP_SHARED_SECRET;
+  if (appSecret && req.headers['x-app-key'] !== appSecret) {
+    return res.status(401).json({ war: 0, message: '' });
+  }
+
   const { text } = req.body ?? {};
   if (!text || text.trim().length === 0) {
     return res.status(200).json({ war: 0, message: '' });
+  }
+
+  // 入力長の上限（トークン暴騰・濫用防止）。長文は弾く。
+  if (text.length > 600) {
+    return res.status(413).json({ war: 0, message: '' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
